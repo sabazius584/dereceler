@@ -114,8 +114,10 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
           <label><input type="checkbox" id="sound" checked> Ses</label>
           <label><input type="checkbox" id="scale"> Key'in dizisini göster</label>
           <label><input type="checkbox" id="micChk"> Piyanodan dinle</label>
+          <label><input type="checkbox" id="midiChk"> MIDI klavye</label>
         </div>
       </div>
+      <div class="mstat" id="midiStat" style="text-align:center;margin-top:8px"></div>
       <div id="micBox" hidden style="margin-top:12px;text-align:center">
         <div class="mstat" id="micStat"></div>
         <div class="lvl"><i id="lvl"></i></div>
@@ -240,23 +242,23 @@ function newQuestion(){
   $("qDeg").innerHTML=(d+1)+"<small>("+ROMAN[d]+")</small>";
   markScale();
 }
-function press(e){
+function press(e,src){
   if(!cur)return;
-  const p=+e.dataset.pc;
+  const p=+e.dataset.pc,snd=src!=="midi";
   if(state==="fix"){
-    tone(+e.dataset.midi);
+    if(snd)tone(+e.dataset.midi);
     if(cur.pcs.has(p)){
       got.add(p);
       e.classList.add("got");
-      if(got.size===4)completeFix("touch");
+      if(got.size===4)completeFix(src==="midi"?"midi":"touch");
     }else{e.classList.add("fl");setTimeout(()=>e.classList.remove("fl"),350)}
     return;
   }
   if(state!=="wait")return;
-  tone(+e.dataset.midi);
+  if(snd)tone(+e.dataset.midi);
   e.classList.add("p");attempt.add(p);if(!pressedByPc[p])pressedByPc[p]=e;
-  if(!cur.pcs.has(p)){e.classList.remove("p");e.classList.add("no");finish(false,false)}
-  else if(attempt.size===4){finish(true,false)}
+  if(!cur.pcs.has(p)){e.classList.remove("p");e.classList.add("no");finish(false,false,src)}
+  else if(attempt.size===4){finish(true,false,src)}
 }
 function showFns(ok){
   const s=SCALES[cur.k],d=cur.d,fn=["R","3","5","7"],cls=["fR","f3","f5","f7"],map={};
@@ -285,7 +287,7 @@ function finish(ok,revealed,src){
   fb.innerHTML=(ok?"Doğru ":(revealed?"Cevap ":"Yanlış "))+"— "+notes[0]+QUAL[d]+
     '<span class="notes">'+notes.join("  ")+(ok?"  ·  "+(ms/1000).toFixed(1)+" sn":"")+'</span><span class="notes hint">'+(ok?"":"Şimdi doğru akoru piyanoda çal.")+"</span>"+(src==="mic"&&mic.heard?'<span class="notes">Duyduğum: '+mic.heard+"</span>":"");
   $("show").hidden=true;
-  if(ok){state="done";$("next").hidden=false;if(src==="mic")timer=setTimeout(newQuestion,1600)}
+  if(ok){state="done";$("next").hidden=false;if(src==="mic"||src==="midi")timer=setTimeout(newQuestion,1600)}
   else{state="fix";$("next").hidden=true}
   updateStats();
 }
@@ -304,9 +306,9 @@ function updateStats(){
 function completeFix(src){
   state="done";
   $("fb").className="fb ok";
-  $("fb").querySelector(".hint").textContent=src==="mic"?"Tamam, geçiyorum.":"Tamam. Hazır olunca Sonraki'ye bas.";
+  $("fb").querySelector(".hint").textContent=(src==="mic"||src==="midi")?"Tamam, geçiyorum.":"Tamam. Hazır olunca Sonraki'ye bas.";
   $("next").hidden=false;
-  if(src==="mic")timer=setTimeout(newQuestion,1600);
+  if(src==="mic"||src==="midi")timer=setTimeout(newQuestion,1600);
 }
 
 /* ---- microphone chord listening ---- */
@@ -411,6 +413,41 @@ function micEvaluate(hold){
     if(ok)completeFix("mic");
     else{$("fb").querySelector(".hint").textContent="Duyduğum: "+mic.heard+" — tekrar çal.";setMicStatus("Sessizlik bekleniyor…")}
   }
+}
+
+/* ---- MIDI keyboard ---- */
+let midiAcc=null;
+function attachMidi(){
+  const names=[];
+  midiAcc.inputs.forEach(inp=>{inp.onmidimessage=onMidi;names.push(inp.name)});
+  $("midiStat").textContent=names.length?"MIDI bağlı: "+names.join(", ")+" — klavyeden çal.":"MIDI cihazı bulunamadı. Klavyeyi USB ile bağla, gerekirse sayfayı yenile.";
+}
+async function startMidi(){
+  if(!navigator.requestMIDIAccess){
+    $("midiChk").checked=false;
+    $("midiStat").textContent="Bu tarayıcı MIDI'yi desteklemiyor (iPad/iPhone Safari desteklemez). Bilgisayarda Chrome ya da Edge kullan.";
+    return;
+  }
+  try{
+    midiAcc=await navigator.requestMIDIAccess();
+    midiAcc.onstatechange=()=>{if($("midiChk").checked)attachMidi()};
+    attachMidi();
+  }catch(err){
+    $("midiChk").checked=false;
+    $("midiStat").textContent="MIDI izni alınamadı (hata: "+(err&&err.name?err.name:"bilinmiyor")+").";
+  }
+}
+function stopMidi(){
+  if(midiAcc)midiAcc.inputs.forEach(inp=>{inp.onmidimessage=null});
+  $("midiStat").textContent="";
+}
+$("midiChk").onchange=e=>{e.target.checked?startMidi():stopMidi()};
+function onMidi(ev){
+  const st=ev.data[0]&0xF0,n=ev.data[1],v=ev.data[2];
+  if(st!==0x90||v===0||!cur)return;
+  const els=keysEls();
+  const e=els.find(x=>+x.dataset.midi===n)||els.find(x=>+x.dataset.pc===n%12);
+  if(e)press(e,"midi");
 }
 
 buildKeys();buildPiano();newQuestion();
