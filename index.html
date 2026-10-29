@@ -74,6 +74,27 @@ p.sub{margin:0 0 14px;color:var(--muted);font-size:.9rem}
 .bars div{width:20px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:.62rem;color:var(--muted)}
 .bars b{display:block;width:100%;background:var(--line);border-radius:2px 2px 0 0}
 .bars .t b{background:var(--accent)}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;font-size:.95rem;cursor:pointer;font-family:inherit}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.popts{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:.85rem;color:var(--muted);margin-bottom:10px}
+.cO{fill:var(--card);stroke:var(--line);stroke-width:1.5}.cO.on{fill:var(--accent);stroke:var(--accent)}
+.tO{fill:var(--ink);font-size:13px;font-weight:600;text-anchor:middle}.tO.on{fill:var(--accent-ink)}
+.cI{fill:var(--card);stroke:var(--line);stroke-width:1.2}.cI.on{fill:#d9a02f;stroke:#d9a02f}
+.tI{fill:var(--muted);font-size:10px;text-anchor:middle}.tI.on{fill:#1b242d;font-weight:700}
+.tD{fill:var(--accent);font-size:13px;font-weight:700;text-anchor:middle}.tM{fill:#d9a02f;font-size:12px;font-weight:700;text-anchor:middle}
+.circ{margin:8px 0;text-align:left}.circ summary{cursor:pointer;font-size:.9rem;color:var(--accent);padding:6px 2px;font-weight:600}
+.tip{font-size:.85rem;color:var(--muted);line-height:1.55;margin-top:10px;text-align:left}
+.tip b{color:var(--ink)}
+.pbanner{background:#2e7d4f;color:#fff;padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:.9rem;cursor:pointer}
+.pr{display:flex;align-items:center;gap:8px;font-size:.85rem;margin:5px 0}
+.pr span{width:96px;flex:none}
+.pr i{flex:1;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.pr b{display:block;height:100%;background:var(--good)}
+.pr em{width:44px;text-align:right;font-style:normal;color:var(--muted);flex:none}
+.pr.mx span{font-weight:700}
+.prow2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:.82rem;color:var(--muted)}
+.prow2 input{width:62px;padding:4px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px}
 .legend{display:flex;gap:12px;justify-content:center;font-size:.78rem;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
@@ -90,6 +111,7 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body>
+<div id="err" hidden style="background:#b53a3a;color:#fff;padding:8px 12px;font-size:.85rem"></div>
 <main>
   <h1>Derece antrenörü</h1>
   <p class="sub">Key seç, derece sorsun; akoru piyanoda çal. Doğruysa geçer, yanlışsa gösterir.</p>
@@ -100,13 +122,29 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
       <div class="mini" style="justify-content:center"><button class="link" id="all">Hepsi</button><button class="link" id="none">Temizle</button></div>
     </div>
     <section>
+      <div class="tabs"><button id="tDeg" aria-pressed="true">Derece</button><button id="tProg" aria-pressed="false">Progresyon</button><button id="tSd" aria-pressed="false">Sec. Dom</button></div>
+      <div class="popts" id="pOpts" hidden>
+        <label><input type="checkbox" id="phide"> Rolleri gizle (ezber)</label>
+        <label><input type="checkbox" id="pchain"> Beşli yönünde key'e geç</label>
+      </div>
+      <div id="pbanner" class="pbanner" hidden></div>
       <div class="card">
         <div class="q-key" id="qKey"></div>
         <div class="q-deg" id="qDeg"></div>
         <div class="fb" id="fb"></div>
+        <details class="circ" open>
+          <summary>Beşliler çemberi</summary>
+          <svg id="circle" viewBox="0 0 320 320" style="width:100%;max-width:250px;display:block;margin:0 auto" role="img" aria-label="Beşliler çemberi"></svg>
+          <div class="tip">
+          <b>Çember nasıl okunur:</b> Dış halka majör key'ler, iç halka rölatif minörler. Sorulan key mavi (I), yanındaki IV ve V de mavi. Altlarındaki turuncu iç halka: <b>vi, ii, iii = I, IV, V'in rölatif minörleri</b> (C'de Am, Dm, Em).<br>
+          <b>Kısa yollar:</b> Cmaj7'nin kökünü bir ses yukarı al (C→D) = Em7 (iii). Cmaj7'nin 7'lisini bir ses aşağı al (B→A) = Am7 (vi). Fmaj7'nin 7'lisini bir ses aşağı al (E→D) = Dm7 (ii). G7'nin kökünü bir ses yukarı al (G→A) = Bm7♭5 (vii).
+        </div>
+      
+        </details>
         <div class="piano" id="piano"></div>
         <div class="legend"><span><i style="background:#4f8fd8"></i>R kök</span><span><i style="background:#3fa56b"></i>3</span><span><i style="background:#d9a02f"></i>5</span><span><i style="background:#9a73d1"></i>7</span></div>
         <div class="row">
+          <button id="hint" hidden>İpucu</button>
           <button id="show">Cevabı göster</button>
           <button class="primary" id="next" hidden>Sonraki (Boşluk)</button>
         </div>
@@ -129,12 +167,26 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
         <span>Doğru: <b id="sGood">0</b></span>
         <span>Yanlış: <b id="sBad">0</b></span>
         <span>Ort. süre: <b id="sTime">–</b></span>
+        <span>Hızlı seri: <b id="sStreak">0</b></span>
       </div>
       <div class="weak" id="weak"></div>
+      <div class="card" style="margin-top:14px;text-align:left">
+        <details open>
+          <summary style="cursor:pointer;font-weight:600;color:var(--accent)">İlerleme</summary>
+          <div id="pbars" style="margin-top:8px"></div>
+          <div class="prow2">
+            <label>Hızlı sayılma süresi <input type="number" id="thr" min="0.5" max="8" step="0.5"> sn</label>
+            <button class="link" id="presetBtn">İlerlemeyi sıfırla</button>
+          </div>
+          <div class="tip">%100 = o key'de her derece, 3 kez hızlı ve doğru bilindi. Hızlı cevap ilerletir, yavaş doğru cevap yerinde bırakır, yanlış cevap geri götürür. Karışık satırı, 2+ key seçiliyken ayrı hesaplanır.</div>
+        </details>
+      </div>
+
     </section>
   </div>
 </main>
 <script>
+window.addEventListener("error",ev=>{const b=document.getElementById("err");b.hidden=false;b.textContent="Hata: "+ev.message+" (satır "+ev.lineno+")"});
 const SCALES={
  "C":["C","D","E","F","G","A","B"],
  "D♭":["D♭","E♭","F","G♭","A♭","B♭","C"],
@@ -162,6 +214,11 @@ const $=id=>document.getElementById(id);
 let selected=new Set(["C"]),cur=null,last=null,state="idle",attempt=new Set(),t0=0,timer=null;
 let asked=0,good=0,bad=0,totalMs=0,timed=0;const miss={};
 let qn=0,retries=[],got=new Set(),pressedByPc={};
+let mode="deg",progSeq=[],progIdx=0,progKey=null;
+let store={deg:{},mix:{},sd:{},sdmix:{}},fastStreak=0,celebrated={},FAST=2;
+try{const raw=localStorage.getItem("dereceProg");if(raw){const o=JSON.parse(raw);for(const k in store)if(o[k])store[k]=o[k]}
+    const f=parseFloat(localStorage.getItem("dereceFast"));if(f>0)FAST=f}catch(e){}
+const saveStore=()=>{try{localStorage.setItem("dereceProg",JSON.stringify(store))}catch(e){}};
 
 /* key list */
 function buildKeys(){
@@ -169,14 +226,14 @@ function buildKeys(){
   ORDER.forEach((k,i)=>{
     const b=document.createElement("button");
     b.className="kb "+(i<6?"down":i===6?"mid":"up");
-    b.innerHTML="<span>"+k+"</span><small>"+STEPS[i]+"</small>";
+    b.innerHTML="<span>"+k+'</span><small class="pc"></small>';b.title=STEPS[i];b.dataset.k=k;
     b.setAttribute("aria-pressed",selected.has(k));
-    b.onclick=()=>{selected.has(k)?selected.delete(k):selected.add(k);b.setAttribute("aria-pressed",selected.has(k));newQuestion()};
+    b.onclick=()=>{selected.has(k)?selected.delete(k):selected.add(k);b.setAttribute("aria-pressed",selected.has(k));reselect()};
     box.appendChild(b);
   });
 }
-$("all").onclick=()=>{ORDER.forEach(k=>selected.add(k));buildKeys();newQuestion()};
-$("none").onclick=()=>{selected.clear();buildKeys();newQuestion()};
+$("all").onclick=()=>{ORDER.forEach(k=>selected.add(k));buildKeys();reselect()};
+$("none").onclick=()=>{selected.clear();buildKeys();reselect()};
 
 /* piano: 2 octaves, C3 (midi 48) .. B4 */
 const WPC=[0,2,4,5,7,9,11],BLK=[[1,0],[3,1],[6,3],[8,4],[10,5]];
@@ -211,15 +268,28 @@ $("scale").onchange=markScale;
 
 /* sound */
 let ac=null;
-function tone(midi){
+function audioCtx(){
+  ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+  if(ac.state==="suspended")ac.resume();
+  return ac;
+}
+function tone(midi,vel){
   if(!$("sound").checked)return;
   try{
-    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
-    if(ac.state==="suspended")ac.resume();
-    const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;
-    o.type="triangle";o.frequency.value=440*Math.pow(2,(midi-69)/12);
-    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.22,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+0.9);
-    o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+0.95);
+    const c=audioCtx(),t=c.currentTime,f=440*Math.pow(2,(midi-69)/12);
+    const amp=0.16*(vel?Math.max(0.25,vel/127):0.8);
+    const dur=Math.max(1.6,3.2-(midi-48)*0.03);
+    const m=c.createGain();
+    m.gain.setValueAtTime(0.0001,t);
+    m.gain.exponentialRampToValueAtTime(amp,t+0.006);
+    m.gain.exponentialRampToValueAtTime(amp*0.35,t+0.35);
+    m.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    m.connect(c.destination);
+    [[1,1],[2,.45],[3,.2],[4,.1]].forEach(([k,g])=>{
+      const o=c.createOscillator(),og=c.createGain();
+      o.type="sine";o.frequency.value=f*k;og.gain.value=g;
+      o.connect(og);og.connect(m);o.start(t);o.stop(t+dur+0.05);
+    });
   }catch(e){}
 }
 
@@ -228,7 +298,9 @@ function chordOf(k,d){const s=SCALES[k];return [0,2,4,6].map(i=>s[(d+i)%7])}
 function newQuestion(){
   clearTimeout(timer);
   $("next").hidden=true;$("show").hidden=false;$("fb").className="fb";$("fb").textContent="";
-  attempt=new Set();clearKeys();
+  attempt=new Set();clearKeys();$("hint").hidden=true;
+  if(mode==="prog"){got=new Set();pressedByPc={};progNext();return}
+  if(mode==="sd"){got=new Set();pressedByPc={};sdNext();return}
   const pool=[...selected];
   const due=retries.find(r=>r.due<=qn+1);
   got=new Set();pressedByPc={};
@@ -237,11 +309,153 @@ function newQuestion(){
   if(due){k=due.k;d=due.d;rt=due}
   else do{k=pool[Math.floor(Math.random()*pool.length)];d=Math.floor(Math.random()*7);n++}while(last&&last.k===k&&last.d===d&&n<20);
   qn++;
-  cur={k,d,rt,pcs:new Set(chordOf(k,d).map(pc))};last=cur;state="wait";t0=performance.now();
+  const nt=chordOf(k,d);
+  cur={k,d,rt,cell:{k,i:d},pcs:new Set(nt.map(pc)),tones:nt.map(pc),name:nt[0]+QUAL[d],notesText:nt.join("  ")};last=cur;state="wait";t0=performance.now();
   $("qKey").textContent=k+" major"+(rt?" · tekrar":"");
   $("qDeg").innerHTML=(d+1)+"<small>("+ROMAN[d]+")</small>";
-  markScale();
+  markScale();drawCircle(k);
 }
+
+/* ---- progression mode + circle ---- */
+const FIFTHS=["C","G","D","A","E","B","F♯","D♭","A♭","E♭","B♭","F"];
+const fifthUp=k=>FIFTHS[(FIFTHS.indexOf(k)+1)%12];
+function degChord(k,i){const s=SCALES[k],nt=[0,2,4,6].map(j=>s[(i+j)%7]);return{name:nt[0]+QUAL[i],tones:nt.map(pc),text:nt.join("  ")}}
+function spell(L,t){const d=(((t-BASE[L]+6)%12)+12)%12-6;return L+(d>0?"♯".repeat(d):d<0?"♭".repeat(-d):"")}
+function domChord(root){
+  const r=pc(root),li="CDEFGAB".indexOf(root[0]),iv=[0,4,7,10],of=[0,2,4,6];
+  const nt=iv.map((x,j)=>j===0?root:spell("CDEFGAB"[(li+of[j])%7],(r+x)%12));
+  return{name:root+"7",tones:nt.map(pc),text:nt.join("  ")};
+}
+function progBuild(){
+  const pool=[...selected],chain=$("pchain").checked;let k,first=true;
+  if(chain){
+    if(progKey===null){k=pool.length?pool[Math.floor(Math.random()*pool.length)]:"C"}
+    else{k=fifthUp(progKey);first=false}
+  }else{
+    let n=0;
+    do{k=pool.length?pool[Math.floor(Math.random()*pool.length)]:"C";n++}while(k===progKey&&pool.length>1&&n<20);
+  }
+  progKey=k;
+  const L=SCALES[k],mk=(role,i)=>Object.assign({k,role},degChord(k,i)),items=[];
+  if(first)items.push(mk("ii",1),mk("V",4));
+  items.push(mk("I",0),mk("IV",3),mk("vii",6),Object.assign({k,role:"III7"},domChord(L[2])),mk("vi",5));
+  if(chain){const nx=fifthUp(k);items.push(Object.assign({k,role:"V7 → "+nx},domChord(SCALES[nx][4])))}
+  else items.push(Object.assign({k,role:"VI7"},domChord(L[5])));
+  progSeq=items;progIdx=0;
+}
+function progNext(){
+  if(progIdx>=progSeq.length)progBuild();
+  const it=progSeq[progIdx++];
+  qn++;
+  cur={k:it.k,d:0,rt:null,prog:true,role:it.role,pcs:new Set(it.tones),tones:it.tones,name:it.name,notesText:it.text};
+  state="wait";t0=performance.now();
+  $("qKey").textContent=it.k+" major · "+progIdx+"/"+progSeq.length;
+  $("qDeg").textContent=$("phide").checked?"?":it.role;
+  $("hint").hidden=!$("phide").checked;
+  markScale();drawCircle(it.k);
+}
+function drawCircle(k){
+  const el=$("circle");if(!el)return;
+  const i0=FIFTHS.indexOf(k),cx=160,cy=160,R1=115,R2=72;let h="";
+  FIFTHS.forEach((key,i)=>{
+    const a=(-90+30*i)*Math.PI/180,rel=(i-i0+12)%12;
+    const deg=rel===0?"I":rel===1?"V":rel===11?"IV":"";
+    const mdeg=rel===0?"vi":rel===1?"iii":rel===11?"ii":"";
+    const x1=cx+R1*Math.cos(a),y1=cy+R1*Math.sin(a),x2=cx+R2*Math.cos(a),y2=cy+R2*Math.sin(a);
+    h+='<circle cx="'+x1+'" cy="'+y1+'" r="19" class="cO'+(deg?" on":"")+'"/><text x="'+x1+'" y="'+(y1+4)+'" class="tO'+(deg?" on":"")+'">'+key+'</text>';
+    if(deg)h+='<text x="'+(cx+(R1+32)*Math.cos(a))+'" y="'+(cy+(R1+32)*Math.sin(a)+4)+'" class="tD">'+deg+'</text>';
+    h+='<circle cx="'+x2+'" cy="'+y2+'" r="17" class="cI'+(mdeg?" on":"")+'"/><text x="'+x2+'" y="'+(y2+3.5)+'" class="tI'+(mdeg?" on":"")+'">'+SCALES[key][5]+'m</text>';
+    if(mdeg)h+='<text x="'+(cx+(R2-34)*Math.cos(a))+'" y="'+(cy+(R2-34)*Math.sin(a)+4)+'" class="tM">'+mdeg+'</text>';
+  });
+  el.innerHTML=h;
+}
+function reselect(){progSeq=[];progIdx=0;progKey=null;newQuestion();refreshChips();renderProgress()}
+function setMode(m){
+  mode=m;
+  $("tDeg").setAttribute("aria-pressed",m==="deg");$("tProg").setAttribute("aria-pressed",m==="prog");$("tSd").setAttribute("aria-pressed",m==="sd");
+  $("pOpts").hidden=m!=="prog";
+  reselect();
+}
+$("tDeg").onclick=()=>setMode("deg");
+$("tProg").onclick=()=>setMode("prog");
+$("tSd").onclick=()=>setMode("sd");
+$("pchain").onchange=()=>{if(mode==="prog")reselect()};
+$("phide").onchange=()=>{
+  if(mode==="prog"&&cur&&cur.prog&&state==="wait"){
+    $("qDeg").textContent=$("phide").checked?"?":cur.role;
+    $("hint").hidden=!$("phide").checked;
+  }
+};
+$("hint").onclick=()=>{if(cur&&cur.prog&&state==="wait")$("qDeg").textContent=cur.role};
+
+/* ---- progress tracking + secondary dominants ---- */
+const SUGGEST=["C","G","F","D","B♭","A","E♭","E","A♭","B","D♭","F♯"];
+const SDN=["","ii","iii","IV","V","vi"];
+const idxsFor=m=>m==="sd"?[1,2,3,4,5]:[0,1,2,3,4,5,6];
+const pctOf=(map,k,ix)=>{let t=0;ix.forEach(i=>t+=map[k+"|"+i]||0);return Math.round(t/(3*ix.length)*100)};
+function banner(t){const b=$("pbanner");b.hidden=false;b.textContent=t}
+$("pbanner").onclick=()=>{$("pbanner").hidden=true};
+function record(c,ok,fast){
+  const name=mode==="sd"?(selected.size>=2?"sdmix":"sd"):(selected.size>=2?"mix":"deg");
+  const map=store[name],key=c.k+"|"+c.i;
+  let v=map[key]||0;
+  if(!ok)v=Math.max(0,v-2);else if(fast)v=Math.min(3,v+1);
+  map[key]=v;saveStore();
+  checkMilestone(name,c.k);
+  refreshChips();renderProgress();
+}
+function checkMilestone(name,k){
+  const ix=idxsFor(name.startsWith("sd")?"sd":"deg");
+  if(name==="deg"||name==="sd"){
+    if(pctOf(store[name],k,ix)===100&&!celebrated[name+k]){
+      celebrated[name+k]=1;
+      const next=SUGGEST.find(x=>pctOf(store[name],x,ix)<100);
+      banner("✅ "+k+" %100 — içselleştirme uygun."+(next?" Önerilen sıradaki key: "+next+". Birkaç key'i karıştırmaya da geçebilirsin.":" Tüm key'ler tamam!"));
+    }
+  }else{
+    const sel=[...selected].sort(),p=Math.round(sel.reduce((a,x)=>a+pctOf(store[name],x,ix),0)/sel.length),tag=name+sel.join();
+    if(p===100&&!celebrated[tag]){celebrated[tag]=1;banner("✅ Karışık ("+sel.join(", ")+") %100.")}
+  }
+}
+function refreshChips(){
+  const map=mode==="sd"?store.sd:store.deg,ix=idxsFor(mode);
+  document.querySelectorAll("#keys .kb").forEach(b=>{
+    const k=b.dataset.k,el=b.querySelector(".pc");
+    if(mode==="prog"){el.textContent="";b.style.backgroundImage="";return}
+    const p=pctOf(map,k,ix);
+    el.textContent=p===100?"✓":p+"%";
+    b.style.backgroundImage=p>0?"linear-gradient(to top, rgba(63,165,107,.5) "+p+"%, transparent "+p+"%)":"";
+  });
+}
+const prow=(l,p,mx)=>'<div class="pr'+(mx?" mx":"")+'"><span>'+l+'</span><i><b style="width:'+p+'%"></b></i><em>'+p+'%</em></div>';
+function renderProgress(){
+  const el=$("pbars");
+  if(mode==="prog"){el.innerHTML='<div class="tip">Progresyon modunda ilerleme tutulmaz.</div>';return}
+  const map=mode==="sd"?store.sd:store.deg,mmap=mode==="sd"?store.sdmix:store.mix,ix=idxsFor(mode);
+  let h="";
+  ORDER.forEach(k=>{h+=prow(k,pctOf(map,k,ix))});
+  const sel=[...selected];
+  h+=sel.length>=2?prow("Karışık ("+sel.length+")",Math.round(sel.reduce((a,k)=>a+pctOf(mmap,k,ix),0)/sel.length),true)
+                  :'<div class="pr"><span>Karışık</span><em style="width:auto">2+ key seç</em></div>';
+  el.innerHTML=h;
+}
+function sdNext(){
+  const pool=[...selected];
+  if(!pool.length){cur=null;state="idle";$("qKey").textContent="";$("qDeg").textContent="";$("fb").textContent="Yukarıdan en az bir key seç.";return}
+  let k,i,n=0;
+  do{k=pool[Math.floor(Math.random()*pool.length)];i=1+Math.floor(Math.random()*5);n++}while(last&&last.k===k&&last.d===i&&n<20);
+  const L=SCALES[k],dc=domChord(L[(i+4)%7]),tg=degChord(k,i);
+  qn++;
+  cur={k,d:i,rt:null,prog:true,role:"V/"+SDN[i],cell:{k,i},pcs:new Set(dc.tones),tones:dc.tones,name:dc.name,notesText:dc.text+"  ·  → "+tg.name};
+  last=cur;state="wait";t0=performance.now();
+  $("qKey").textContent=k+" major";
+  $("qDeg").textContent="V/"+SDN[i];
+  markScale();drawCircle(k);
+}
+$("thr").value=FAST;
+$("thr").onchange=()=>{const v=parseFloat($("thr").value);if(v>0){FAST=v;try{localStorage.setItem("dereceFast",v)}catch(e){}}};
+$("presetBtn").onclick=()=>{if(confirm("Tüm ilerleme silinsin mi?")){store={deg:{},mix:{},sd:{},sdmix:{}};celebrated={};saveStore();refreshChips();renderProgress()}};
+
 function press(e,src){
   if(!cur)return;
   const p=+e.dataset.pc,snd=src!=="midi";
@@ -261,31 +475,34 @@ function press(e,src){
   else if(attempt.size===4){finish(true,false,src)}
 }
 function showFns(ok){
-  const s=SCALES[cur.k],d=cur.d,fn=["R","3","5","7"],cls=["fR","f3","f5","f7"],map={};
-  [0,2,4,6].forEach((i,j)=>map[pc(s[(d+i)%7])]=j);
+  const fn=["R","3","5","7"],cls=["fR","f3","f5","f7"],map={};
+  cur.tones.forEach((q,j)=>map[q]=j);
   keysEls().forEach(e=>e.classList.remove("p","ok","f","fR","f3","f5","f7"));
   let els=[];
   if(ok&&Object.keys(pressedByPc).length===4){els=Object.values(pressedByPc)}
   else{
     const all=keysEls().sort((a,b)=>a.dataset.midi-b.dataset.midi);let prev=-1;
-    [0,2,4,6].forEach(i=>{const q=pc(s[(d+i)%7]);const el=all.find(e=>+e.dataset.pc===q&&+e.dataset.midi>prev)||all.find(e=>+e.dataset.pc===q);if(el){els.push(el);prev=+el.dataset.midi}});
+    cur.tones.forEach(q=>{const el=all.find(e=>+e.dataset.pc===q&&+e.dataset.midi>prev)||all.find(e=>+e.dataset.pc===q);if(el){els.push(el);prev=+el.dataset.midi}});
   }
   els.forEach(e=>{const j=map[+e.dataset.pc];e.classList.add("f",cls[j]);e.dataset.fn=fn[j]});
 }
 function finish(ok,revealed,src){
   if(state!=="wait")return;
-  const ms=performance.now()-t0,{k,d,rt}=cur,notes=chordOf(k,d);
+  const ms=performance.now()-t0,{k,d,rt}=cur;
   asked++;
+  const fast=ok&&ms/1000<=FAST;
+  if(cur.cell)record(cur.cell,ok,fast);
+  if(fast){fastStreak++;if(fastStreak===10)banner("⚡ 10 hızlı doğru üst üste. Bu key'lere içselleştirme uygun görünüyor.")}else fastStreak=0;
   if(ok){good++;totalMs+=ms;timed++;
     if(rt){if(rt.stage===0){rt.stage=1;rt.due=qn+6}else retries=retries.filter(r=>r!==rt)}
   }else{bad++;miss[k]=(miss[k]||0)+1;
     if(rt){rt.stage=0;rt.due=qn+3}
-    else if(!retries.some(r=>r.k===k&&r.d===d))retries.push({k,d,stage:0,due:qn+3});
+    else if(!cur.prog&&!retries.some(r=>r.k===k&&r.d===d))retries.push({k,d,stage:0,due:qn+3});
   }
   showFns(ok);
   const fb=$("fb");fb.className="fb "+(ok?"ok":"no");
-  fb.innerHTML=(ok?"Doğru ":(revealed?"Cevap ":"Yanlış "))+"— "+notes[0]+QUAL[d]+
-    '<span class="notes">'+notes.join("  ")+(ok?"  ·  "+(ms/1000).toFixed(1)+" sn":"")+'</span><span class="notes hint">'+(ok?"":"Şimdi doğru akoru piyanoda çal.")+"</span>"+(src==="mic"&&mic.heard?'<span class="notes">Duyduğum: '+mic.heard+"</span>":"");
+  fb.innerHTML=(ok?"Doğru ":(revealed?"Cevap ":"Yanlış "))+"— "+cur.name+(cur.prog?" ("+cur.role+")":"")+
+    '<span class="notes">'+cur.notesText+(ok?"  ·  "+(ms/1000).toFixed(1)+" sn"+(fast?" ⚡":" (yavaş)"):"")+'</span><span class="notes hint">'+(ok?"":"Şimdi doğru akoru piyanoda çal.")+"</span>"+(src==="mic"&&mic.heard?'<span class="notes">Duyduğum: '+mic.heard+"</span>":"");
   $("show").hidden=true;
   if(ok){state="done";$("next").hidden=false;if(src==="mic"||src==="midi")timer=setTimeout(newQuestion,1600)}
   else{state="fix";$("next").hidden=true}
@@ -298,7 +515,7 @@ document.addEventListener("keydown",e=>{
   if(e.key===" "){e.preventDefault();if(state==="wait")finish(false,true);else if(state==="done")newQuestion()}
 });
 function updateStats(){
-  $("sAsked").textContent=asked;$("sGood").textContent=good;$("sBad").textContent=bad;
+  $("sAsked").textContent=asked;$("sStreak").textContent=fastStreak;$("sGood").textContent=good;$("sBad").textContent=bad;
   $("sTime").textContent=timed?(totalMs/timed/1000).toFixed(1)+" sn":"–";
   const w=Object.entries(miss).sort((a,b)=>b[1]-a[1]).slice(0,4);
   $("weak").textContent=w.length?"En çok zorlandığın key'ler: "+w.map(x=>x[0]+" ("+x[1]+")").join(", "):"";
@@ -441,16 +658,18 @@ function stopMidi(){
   if(midiAcc)midiAcc.inputs.forEach(inp=>{inp.onmidimessage=null});
   $("midiStat").textContent="";
 }
-$("midiChk").onchange=e=>{e.target.checked?startMidi():stopMidi()};
+$("midiChk").onchange=e=>{if(e.target.checked){$("sound").checked=true;try{audioCtx()}catch(_){}startMidi()}else stopMidi()};
 function onMidi(ev){
   const st=ev.data[0]&0xF0,n=ev.data[1],v=ev.data[2];
-  if(st!==0x90||v===0||!cur)return;
+  if(st!==0x90||v===0)return;
+  tone(n,v);
+  if(!cur)return;
   const els=keysEls();
   const e=els.find(x=>+x.dataset.midi===n)||els.find(x=>+x.dataset.pc===n%12);
   if(e)press(e,"midi");
 }
 
-buildKeys();buildPiano();newQuestion();
+buildKeys();refreshChips();renderProgress();buildPiano();newQuestion();
 </script>
 </body>
 </html>
