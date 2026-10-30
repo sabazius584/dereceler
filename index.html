@@ -700,24 +700,31 @@ $("micChk").onchange = e => { e.target.checked ? startMic() : stopMic() };
 function processMeydaChroma(chromaArray) {
   if (!cur || levhaOn() || (state !== "wait" && state !== "fix")) return;
 
-  // Ses seviye barlarını ekranda göster
+  // Dip gürültü kontrolü: Sessizlikte veya çok hafif seslerde tetiklenme yapmasın
+  const totalEnergy = chromaArray.reduce((a, b) => a + b, 0);
+  if (totalEnergy < 0.8) {
+    showHeard(new Array(12).fill(0));
+    return;
+  }
+
+  // Ses seviye barlarını ekranda güncelle
   showHeard(chromaArray);
 
-  // Eşik değerini esnek tutarak duyulan aktif notaları topluyoruz
-  const threshold = 0.20; 
+  // Eşik değerini dip gürültüleri eleyecek seviyeye çekiyoruz (0.35)
+  const threshold = 0.35;
   const activeNotes = [];
   for(let i = 0; i < chromaArray.length; i++) {
     if(chromaArray[i] >= threshold) activeNotes.push(i);
   }
 
-  // İstenen akorun tonları (cur.pcs) o an duyulan aktif seslerin içinde var mı kontrol edelim
+  // Akorun tüm notaları aktif sesler arasında mevcut mu?
   let matchCount = 0;
   for(let pcVal of cur.pcs) {
     if(activeNotes.includes(pcVal)) matchCount++;
   }
 
-  // Akorun tüm sesleri eksiksiz yakalandıysa anında tetikle
-  const isChordMatched = (cur.pcs.size === 3 && matchCount >= 3) || (matchCount >= cur.pcs.size);
+  // Sadece tam eşleşmede tetikle
+  const isChordMatched = (matchCount >= cur.pcs.size);
 
   if (isChordMatched) {
     if (state === "wait") {
