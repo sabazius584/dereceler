@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Derece antrenörü</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#2a5a9c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Derece">
 <style>
 :root{
   box-sizing:border-box;
@@ -223,6 +229,7 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   </div>
 </main>
 <script>
+try{if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
 window.addEventListener("error",ev=>{const b=document.getElementById("err");b.hidden=false;b.textContent="Hata: "+ev.message+" (satır "+ev.lineno+")"});
 const SCALES={
  "C":["C","D","E","F","G","A","B"],
