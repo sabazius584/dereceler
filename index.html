@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Derece antrenörü</title>
+<!-- MEYDA KÜTÜPHANESİ CDN EKLENDİ -->
+<script src="https://unpkg.com/meyda/dist/web/meyda.min.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#2a5a9c">
@@ -643,117 +645,79 @@ function completeFix(src){
   $("next").hidden=false;
 }
 
-/* ---- microphone chord listening ---- */
-const mic={on:false,ac:null,an:null,an2:null,stream:null,timer:null,floor:0.004,armed:false,silent:0,win:null,calib:null,heard:""};
-const setMicStatus=t=>{$("micStat").textContent=t};
-function thr(){
-  const k=Math.pow(1.35,5-(+$("sens").value));
-  return {on:Math.max(0.012*k,mic.floor*4*k),off:Math.max(0.006*k,mic.floor*2*k)};
-}
+/* ---- MEYDA ENTEGRASYONLU MİKROFON MOTORU ---- */
+let meydaAnalyzer = null;
+const mic = { on: false, ac: null, stream: null, heard: "" };
+const setMicStatus = t => { $("micStat").textContent = t };
+
 async function startMic(){
   try{
-    const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    const AC=window.AudioContext||window.webkitAudioContext;
-    mic.ac=mic.ac||new AC();
-    if(mic.ac.state==="suspended")await mic.ac.resume();
-    mic.stream=st;
-    const src=mic.ac.createMediaStreamSource(st);
-    mic.an=mic.ac.createAnalyser();mic.an.fftSize=32768;mic.an.smoothingTimeConstant=0;
-    mic.an2=mic.ac.createAnalyser();mic.an2.fftSize=2048;mic.an2.smoothingTimeConstant=0;
-    src.connect(mic.an);src.connect(mic.an2);
-    mic.fbuf=new Float32Array(mic.an.frequencyBinCount);mic.tbuf=new Float32Array(2048);
-    mic.on=true;mic.armed=false;mic.silent=0;mic.win=null;mic.calib=[];
-    $("sound").checked=false;
-    $("micBox").hidden=false;
-    setMicStatus("Ortam sesi ölçülüyor, sessiz kal…");
-    mic.timer=setInterval(micTick,100);
-  }catch(err){
-    $("micChk").checked=false;$("micBox").hidden=false;
-    setMicStatus("Mikrofon açılamadı (hata: "+(err&&err.name?err.name:"bilinmiyor")+"). "+(err&&err.name==="NotAllowedError"?"İzin verilmedi ya da bu sayfa mikrofona izin vermiyor.":"Bu sayfa mikrofon kullanamıyor olabilir."));
-  }
-}
-function stopMic(){
-  clearInterval(mic.timer);mic.on=false;
-  if(mic.stream)mic.stream.getTracks().forEach(t=>t.stop());
-  $("micBox").hidden=true;
-}
-$("micChk").onchange=e=>{e.target.checked?startMic():stopMic()};
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const AC = window.AudioContext || window.webkitAudioContext;
+    mic.ac = mic.ac || new AC();
+    if(mic.ac.state === "suspended") await mic.ac.resume();
+    mic.stream = st;
+    const src = mic.ac.createMediaStreamSource(st);
 
-function chroma(){
-  mic.an.getFloatFrequencyData(mic.fbuf);
-  const sr=mic.ac.sampleRate,n=mic.fbuf.length,bw=sr/(2*n);
-  const lo=Math.max(2,Math.floor(50/bw)),hi=Math.min(n-2,Math.ceil(4200/bw));
-  const mag=new Float32Array(hi+2);let mx=0;
-  for(let i=lo-1;i<=hi+1;i++){mag[i]=Math.pow(10,mic.fbuf[i]/20);if(mag[i]>mx)mx=mag[i]}
-  const c=new Array(12).fill(0);
-  for(let i=lo;i<=hi;i++){
-    const m=mag[i];
-    if(m<mx*0.04||m<=mag[i-1]||m<mag[i+1])continue;
-    const f=i*bw,r=Math.round(69+12*Math.log2(f/440));
-    c[((r%12)+12)%12]+=m/(1+Math.pow(f/600,2));
+    // Meyda Analyzer Başlatılıyor
+    meydaAnalyzer = Meyda.createMeydaAnalyzer({
+      audioContext: mic.ac,
+      source: src,
+      bufferSize: 4096,
+      featureExtractors: ["chroma"],
+      callback: (features) => {
+        if (features && features.chroma && mic.on) {
+          processMeydaChroma(features.chroma);
+        }
+      }
+    });
+
+    meydaAnalyzer.start();
+
+    mic.on = true;
+    $("sound").checked = false;
+    $("micBox").hidden = false;
+    setMicStatus("Meyda aktif — piyanodan çal...");
+  }catch(err){
+    $("micChk").checked = false;
+    $("micBox").hidden = false;
+    setMicStatus("Mikrofon açılamadı (hata: " + (err && err.name ? err.name : "bilinmiyor") + ").");
   }
-  const cm=Math.max(...c);
-  return cm>0?c.map(v=>v/cm):null;
 }
-function micTick(){
-  if(!mic.on)return;
-  mic.an2.getFloatTimeDomainData(mic.tbuf);
-  let sum=0;for(let i=0;i<mic.tbuf.length;i++)sum+=mic.tbuf[i]*mic.tbuf[i];
-  const rms=Math.sqrt(sum/mic.tbuf.length),prev=mic.prev||0;mic.prev=rms;
-  $("lvl").style.width=Math.min(100,rms*400)+"%";
-  if(mic.calib){
-    mic.calib.push(rms);
-    if(mic.calib.length>=10){mic.floor=mic.calib.reduce((a,b)=>a+b)/10;mic.calib=null}
-    return;
+
+function stopMic(){
+  if (meydaAnalyzer) {
+    meydaAnalyzer.stop();
+    meydaAnalyzer = null;
   }
-  const t=thr(),now=performance.now();
-  if(!cur||levhaOn()||(state!=="wait"&&state!=="fix")){mic.armed=false;mic.silent=0;mic.win=null;return}
-  if(!mic.armed&&!mic.win){
-    if(rms<t.off)mic.silent++;else mic.silent=0;
-    if(mic.silent>=5){mic.armed=true;setMicStatus("Dinliyorum — akoru çal (tek tek de olur)")}
-    else setMicStatus("Sessizlik bekleniyor…");
-    return;
-  }
-  if(!mic.win){
-    if(rms<t.on)return;
-    mic.win={first:now,last:now,recent:[],match:0};setMicStatus("Duyuyorum…");
-  }else if(rms>t.on&&rms>prev*1.5){mic.win.last=now;mic.win.match=0}
-  const w=mic.win;
-  if(now-w.last>=350&&rms>=t.off*1.2){
-    const c=chroma();
-    if(c){
-      w.recent.push(c);if(w.recent.length>4)w.recent.shift();
-      showHeard(c);
-      const top4=c.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,4);
-      const hit=[...cur.pcs].every(q=>top4.some(x=>x[1]===q&&x[0]>=0.35));
-      w.match=hit?w.match+1:0;
-      if(w.match>=3){endWin(c,true);return}
+  mic.on = false;
+  if(mic.stream) mic.stream.getTracks().forEach(t => t.stop());
+  $("micBox").hidden = true;
+}
+
+$("micChk").onchange = e => { e.target.checked ? startMic() : stopMic() };
+
+function processMeydaChroma(chromaArray) {
+  if (!cur || levhaOn() || (state !== "wait" && state !== "fix")) return;
+
+  // Ses seviye barlarını ve duyulan notaları göster
+  showHeard(chromaArray);
+
+  // En baskın 4 notayı seç
+  const top4 = chromaArray.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]).slice(0, 4);
+  const hit = [...cur.pcs].every(q => top4.some(x => x[1] === q && x[0] >= 0.30));
+
+  if (hit) {
+    if (state === "wait") {
+      finish(true, false, "mic");
+    } else if (state === "fix") {
+      completeFix("mic");
     }
   }
-  if(now-w.last>=1600||(rms<t.off&&now-w.last>=500)||now-w.first>9000){
-    if(!w.recent.length){mic.win=null;mic.armed=false;mic.silent=0;setMicStatus("Akor duyamadım, tekrar çal.");return}
-    const hold=new Array(12).fill(0);
-    w.recent.forEach(c=>c.forEach((v,i)=>hold[i]+=v/w.recent.length));
-    const mxh=Math.max(...hold)||1;
-    endWin(hold.map(v=>v/mxh),false);
-  }
 }
-function endWin(c,early){mic.win=null;mic.armed=false;mic.silent=0;micEvaluate(c,early)}
+
 function showHeard(hold){
-  $("bars").innerHTML=hold.map((v,i)=>'<div class="'+(cur&&cur.pcs.has(i)?"t":"")+'"><b style="height:'+Math.max(1,Math.round(v*30))+'px"></b>'+NAMES[i]+"</div>").join("");
-}
-function micEvaluate(hold,early){
-  const heardIdx=hold.map((v,i)=>v>=0.2?i:-1).filter(i=>i>=0);
-  mic.heard=hold.map((v,i)=>[v,i]).filter(x=>x[0]>=0.4).sort((a,b)=>b[0]-a[0]).map(x=>NAMES[x[1]]).join("  ");
-  showHeard(hold);
-  if(!early&&heardIdx.length<3){setMicStatus("Akor duyamadım ("+(mic.heard||"–")+"), tekrar çal.");return}
-  const top4=new Set(hold.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]).slice(0,4).map(x=>x[1]));
-  const ok=early||[...cur.pcs].every(q=>top4.has(q));
-  if(state==="wait"){finish(ok,false,"mic")}
-  else if(state==="fix"){
-    if(ok)completeFix("mic");
-    else{$("fb").querySelector(".hint").textContent="Duyduğum: "+mic.heard+" — tekrar çal.";setMicStatus("Sessizlik bekleniyor…")}
-  }
+  $("bars").innerHTML = hold.map((v, i) => '<div class="' + (cur && cur.pcs.has(i) ? "t" : "") + '"><b style="height:' + Math.max(1, Math.round(v * 30)) + 'px"></b>' + NAMES[i] + "</div>").join("");
 }
 
 /* ---- MIDI keyboard ---- */
