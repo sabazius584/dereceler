@@ -95,6 +95,35 @@ p.sub{margin:0 0 14px;color:var(--muted);font-size:.9rem}
 .pr.mx span{font-weight:700}
 .prow2{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:.82rem;color:var(--muted)}
 .prow2 input{width:62px;padding:4px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px}
+.pal{margin:10px 0}
+.pbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.pbar i{display:block;height:100%;width:100%;background:var(--accent)}
+.pbar i.late{background:#d9a02f}
+.proots{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.pquals{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+.pb{padding:8px 2px;min-height:46px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;font-size:.95rem;cursor:pointer;font-family:inherit;line-height:1.15}
+.pb.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.pb.tgt{outline:3px solid #d9a02f}
+.pb.bad{background:var(--no);color:#fff}
+.pb{touch-action:manipulation;user-select:none;-webkit-user-select:none;min-height:56px}
+.proots{display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:56px 56px;gap:6px 0}
+.proots .pb{margin:0 2px;padding:2px 0}
+.pb.w{grid-row:2;grid-column:var(--c) / span 2;background:var(--white);color:#14202b;font-size:1.05rem;font-weight:600}
+.pb.k{grid-row:1;grid-column:var(--c) / span 2;background:var(--black);color:#e8edf2;border-color:var(--black);font-size:.78rem}
+.pb.sel{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+#pquals .pb{border-left:6px solid var(--qc,var(--line));font-size:1rem}
+#pquals .pb[data-v="maj7"]{--qc:#2a9d8f}
+#pquals .pb[data-v="m7"]{--qc:#e07a5f}
+#pquals .pb[data-v="7"]{--qc:#c2417d}
+#pquals .pb[data-v="m7♭5"]{--qc:#6b7a8f}
+#pquals .pb.sel{background:var(--qc);color:#fff;border-color:var(--qc)}
+body.lv{padding-bottom:280px}
+body.lv .pal{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100%,860px);z-index:20;margin:0;background:var(--card);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(0,0,0,.14)}
+@media (orientation:landscape) and (max-height:520px){
+  body.lv{padding-bottom:0}
+  body.lv .pal{left:auto;right:0;top:0;bottom:0;transform:none;width:52%;border-top:0;border-left:1px solid var(--line);overflow:auto;padding:10px 12px;box-shadow:none}
+  body.lv main{max-width:none;padding-right:calc(52% + 10px)}
+}
 .legend{display:flex;gap:12px;justify-content:center;font-size:.78rem;color:var(--muted);margin-top:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
@@ -132,6 +161,11 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
         <div class="q-key" id="qKey"></div>
         <div class="q-deg" id="qDeg"></div>
         <div class="fb" id="fb"></div>
+        <div class="pal" id="pal" hidden>
+          <div class="pbar"><i id="cdBar"></i></div>
+          <div class="proots" id="proots"></div>
+          <div class="pquals" id="pquals"></div>
+        </div>
         <details class="circ" open>
           <summary>Beşliler çemberi</summary>
           <svg id="circle" viewBox="0 0 320 320" style="width:100%;max-width:250px;display:block;margin:0 auto" role="img" aria-label="Beşliler çemberi"></svg>
@@ -151,6 +185,8 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
         <div class="opts">
           <label><input type="checkbox" id="sound" checked> Ses</label>
           <label><input type="checkbox" id="scale"> Key'in dizisini göster</label>
+          <label><input type="checkbox" id="levha"> Levha ile cevapla</label>
+          <label><input type="checkbox" id="fast"> Hızlı akış</label>
           <label><input type="checkbox" id="micChk"> Piyanodan dinle</label>
           <label><input type="checkbox" id="midiChk"> MIDI klavye</label>
         </div>
@@ -176,6 +212,7 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
           <div id="pbars" style="margin-top:8px"></div>
           <div class="prow2">
             <label>Hızlı sayılma süresi <input type="number" id="thr" min="0.5" max="8" step="0.5"> sn</label>
+            <label>Hızlı akış geçişi <input type="number" id="flow" min="0.2" max="5" step="0.1"> sn</label>
             <button class="link" id="presetBtn">İlerlemeyi sıfırla</button>
           </div>
           <div class="tip">%100 = o key'de her derece, 3 kez hızlı ve doğru bilindi. Hızlı cevap ilerletir, yavaş doğru cevap yerinde bırakır, yanlış cevap geri götürür. Karışık satırı, 2+ key seçiliyken ayrı hesaplanır.</div>
@@ -215,10 +252,12 @@ let selected=new Set(["C"]),cur=null,last=null,state="idle",attempt=new Set(),t0
 let asked=0,good=0,bad=0,totalMs=0,timed=0;const miss={};
 let qn=0,retries=[],got=new Set(),pressedByPc={};
 let mode="deg",progSeq=[],progIdx=0,progKey=null;
-let store={deg:{},mix:{},sd:{},sdmix:{}},fastStreak=0,celebrated={},FAST=2;
+const EMPTY=()=>({deg:{},mix:{},sd:{},sdmix:{},degL:{},mixL:{},sdL:{},sdmixL:{}});
+let store=EMPTY(),fastStreak=0,celebrated={},FAST=2;
 try{const raw=localStorage.getItem("dereceProg");if(raw){const o=JSON.parse(raw);for(const k in store)if(o[k])store[k]=o[k]}
     const f=parseFloat(localStorage.getItem("dereceFast"));if(f>0)FAST=f}catch(e){}
 const saveStore=()=>{try{localStorage.setItem("dereceProg",JSON.stringify(store))}catch(e){}};
+let FLOW=0.7;try{const f=parseFloat(localStorage.getItem("dereceFlow"));if(f>0)FLOW=f}catch(e){}
 
 /* key list */
 function buildKeys(){
@@ -310,21 +349,22 @@ function newQuestion(){
   else do{k=pool[Math.floor(Math.random()*pool.length)];d=Math.floor(Math.random()*7);n++}while(last&&last.k===k&&last.d===d&&n<20);
   qn++;
   const nt=chordOf(k,d);
-  cur={k,d,rt,cell:{k,i:d},pcs:new Set(nt.map(pc)),tones:nt.map(pc),name:nt[0]+QUAL[d],notesText:nt.join("  ")};last=cur;state="wait";t0=performance.now();
+  cur={k,d,rt,q:QUAL[d],cell:{k,i:d},pcs:new Set(nt.map(pc)),tones:nt.map(pc),name:nt[0]+QUAL[d],notesText:nt.join("  ")};last=cur;state="wait";t0=performance.now();
   $("qKey").textContent=k+" major"+(rt?" · tekrar":"");
   $("qDeg").innerHTML=(d+1)+"<small>("+ROMAN[d]+")</small>";
-  markScale();drawCircle(k);
+  markScale();drawCircle(k);qShown();
 }
 
 /* ---- progression mode + circle ---- */
 const FIFTHS=["C","G","D","A","E","B","F♯","D♭","A♭","E♭","B♭","F"];
-const fifthUp=k=>FIFTHS[(FIFTHS.indexOf(k)+1)%12];
-function degChord(k,i){const s=SCALES[k],nt=[0,2,4,6].map(j=>s[(i+j)%7]);return{name:nt[0]+QUAL[i],tones:nt.map(pc),text:nt.join("  ")}}
+const fidx=k=>k==="G♭"?6:FIFTHS.indexOf(k);
+const fifthUp=k=>FIFTHS[(fidx(k)+1)%12];
+function degChord(k,i){const s=SCALES[k],nt=[0,2,4,6].map(j=>s[(i+j)%7]);return{name:nt[0]+QUAL[i],q:QUAL[i],tones:nt.map(pc),text:nt.join("  ")}}
 function spell(L,t){const d=(((t-BASE[L]+6)%12)+12)%12-6;return L+(d>0?"♯".repeat(d):d<0?"♭".repeat(-d):"")}
 function domChord(root){
   const r=pc(root),li="CDEFGAB".indexOf(root[0]),iv=[0,4,7,10],of=[0,2,4,6];
   const nt=iv.map((x,j)=>j===0?root:spell("CDEFGAB"[(li+of[j])%7],(r+x)%12));
-  return{name:root+"7",tones:nt.map(pc),text:nt.join("  ")};
+  return{name:root+"7",q:"7",tones:nt.map(pc),text:nt.join("  ")};
 }
 function progBuild(){
   const pool=[...selected],chain=$("pchain").checked;let k,first=true;
@@ -347,22 +387,22 @@ function progNext(){
   if(progIdx>=progSeq.length)progBuild();
   const it=progSeq[progIdx++];
   qn++;
-  cur={k:it.k,d:0,rt:null,prog:true,role:it.role,pcs:new Set(it.tones),tones:it.tones,name:it.name,notesText:it.text};
+  cur={k:it.k,d:0,rt:null,q:it.q,prog:true,role:it.role,pcs:new Set(it.tones),tones:it.tones,name:it.name,notesText:it.text};
   state="wait";t0=performance.now();
   $("qKey").textContent=it.k+" major · "+progIdx+"/"+progSeq.length;
   $("qDeg").textContent=$("phide").checked?"?":it.role;
   $("hint").hidden=!$("phide").checked;
-  markScale();drawCircle(it.k);
+  markScale();drawCircle(it.k);qShown();
 }
 function drawCircle(k){
   const el=$("circle");if(!el)return;
-  const i0=FIFTHS.indexOf(k),cx=160,cy=160,R1=115,R2=72;let h="";
+  const i0=fidx(k),cx=160,cy=160,R1=115,R2=72;let h="";
   FIFTHS.forEach((key,i)=>{
     const a=(-90+30*i)*Math.PI/180,rel=(i-i0+12)%12;
     const deg=rel===0?"I":rel===1?"V":rel===11?"IV":"";
     const mdeg=rel===0?"vi":rel===1?"iii":rel===11?"ii":"";
     const x1=cx+R1*Math.cos(a),y1=cy+R1*Math.sin(a),x2=cx+R2*Math.cos(a),y2=cy+R2*Math.sin(a);
-    h+='<circle cx="'+x1+'" cy="'+y1+'" r="19" class="cO'+(deg?" on":"")+'"/><text x="'+x1+'" y="'+(y1+4)+'" class="tO'+(deg?" on":"")+'">'+key+'</text>';
+    h+='<circle cx="'+x1+'" cy="'+y1+'" r="19" class="cO'+(deg?" on":"")+'"/><text x="'+x1+'" y="'+(y1+4)+'" class="tO'+(deg?" on":"")+'"'+(i===6?' style="font-size:10px"':'')+'>'+(i===6?"F♯/G♭":key)+'</text>';
     if(deg)h+='<text x="'+(cx+(R1+32)*Math.cos(a))+'" y="'+(cy+(R1+32)*Math.sin(a)+4)+'" class="tD">'+deg+'</text>';
     h+='<circle cx="'+x2+'" cy="'+y2+'" r="17" class="cI'+(mdeg?" on":"")+'"/><text x="'+x2+'" y="'+(y2+3.5)+'" class="tI'+(mdeg?" on":"")+'">'+SCALES[key][5]+'m</text>';
     if(mdeg)h+='<text x="'+(cx+(R2-34)*Math.cos(a))+'" y="'+(cy+(R2-34)*Math.sin(a)+4)+'" class="tM">'+mdeg+'</text>';
@@ -396,7 +436,7 @@ const pctOf=(map,k,ix)=>{let t=0;ix.forEach(i=>t+=map[k+"|"+i]||0);return Math.r
 function banner(t){const b=$("pbanner");b.hidden=false;b.textContent=t}
 $("pbanner").onclick=()=>{$("pbanner").hidden=true};
 function record(c,ok,fast){
-  const name=mode==="sd"?(selected.size>=2?"sdmix":"sd"):(selected.size>=2?"mix":"deg");
+  const name=(mode==="sd"?(selected.size>=2?"sdmix":"sd"):(selected.size>=2?"mix":"deg"))+(levhaOn()?"L":"");
   const map=store[name],key=c.k+"|"+c.i;
   let v=map[key]||0;
   if(!ok)v=Math.max(0,v-2);else if(fast)v=Math.min(3,v+1);
@@ -406,7 +446,7 @@ function record(c,ok,fast){
 }
 function checkMilestone(name,k){
   const ix=idxsFor(name.startsWith("sd")?"sd":"deg");
-  if(name==="deg"||name==="sd"){
+  if(name==="deg"||name==="sd"||name==="degL"||name==="sdL"){
     if(pctOf(store[name],k,ix)===100&&!celebrated[name+k]){
       celebrated[name+k]=1;
       const next=SUGGEST.find(x=>pctOf(store[name],x,ix)<100);
@@ -418,7 +458,7 @@ function checkMilestone(name,k){
   }
 }
 function refreshChips(){
-  const map=mode==="sd"?store.sd:store.deg,ix=idxsFor(mode);
+  const map=store[(mode==="sd"?"sd":"deg")+(levhaOn()?"L":"")],ix=idxsFor(mode);
   document.querySelectorAll("#keys .kb").forEach(b=>{
     const k=b.dataset.k,el=b.querySelector(".pc");
     if(mode==="prog"){el.textContent="";b.style.backgroundImage="";return}
@@ -431,8 +471,8 @@ const prow=(l,p,mx)=>'<div class="pr'+(mx?" mx":"")+'"><span>'+l+'</span><i><b s
 function renderProgress(){
   const el=$("pbars");
   if(mode==="prog"){el.innerHTML='<div class="tip">Progresyon modunda ilerleme tutulmaz.</div>';return}
-  const map=mode==="sd"?store.sd:store.deg,mmap=mode==="sd"?store.sdmix:store.mix,ix=idxsFor(mode);
-  let h="";
+  const sf=levhaOn()?"L":"",map=store[(mode==="sd"?"sd":"deg")+sf],mmap=store[(mode==="sd"?"sdmix":"mix")+sf],ix=idxsFor(mode);
+  let h='<div class="tip" style="margin:0 0 6px">Ölçüm: '+(levhaOn()?"levha (düşünme süresi)":"piyano / MIDI / mikrofon")+"</div>";
   ORDER.forEach(k=>{h+=prow(k,pctOf(map,k,ix))});
   const sel=[...selected];
   h+=sel.length>=2?prow("Karışık ("+sel.length+")",Math.round(sel.reduce((a,k)=>a+pctOf(mmap,k,ix),0)/sel.length),true)
@@ -446,18 +486,86 @@ function sdNext(){
   do{k=pool[Math.floor(Math.random()*pool.length)];i=1+Math.floor(Math.random()*5);n++}while(last&&last.k===k&&last.d===i&&n<20);
   const L=SCALES[k],dc=domChord(L[(i+4)%7]),tg=degChord(k,i);
   qn++;
-  cur={k,d:i,rt:null,prog:true,role:"V/"+SDN[i],cell:{k,i},pcs:new Set(dc.tones),tones:dc.tones,name:dc.name,notesText:dc.text+"  ·  → "+tg.name};
+  cur={k,d:i,rt:null,q:"7",prog:true,role:"V/"+SDN[i],cell:{k,i},pcs:new Set(dc.tones),tones:dc.tones,name:dc.name,notesText:dc.text+"  ·  → "+tg.name};
   last=cur;state="wait";t0=performance.now();
   $("qKey").textContent=k+" major";
   $("qDeg").textContent="V/"+SDN[i];
-  markScale();drawCircle(k);
+  markScale();drawCircle(k);qShown();
 }
 $("thr").value=FAST;
+$("flow").value=FLOW;
+$("flow").onchange=()=>{const v=parseFloat($("flow").value);if(v>0){FLOW=v;try{localStorage.setItem("dereceFlow",v)}catch(e){}}};
+try{$("fast").checked=localStorage.getItem("dereceFastOn")==="1"}catch(e){}
+$("fast").onchange=()=>{try{localStorage.setItem("dereceFastOn",$("fast").checked?"1":"0")}catch(e){}};
 $("thr").onchange=()=>{const v=parseFloat($("thr").value);if(v>0){FAST=v;try{localStorage.setItem("dereceFast",v)}catch(e){}}};
-$("presetBtn").onclick=()=>{if(confirm("Tüm ilerleme silinsin mi?")){store={deg:{},mix:{},sd:{},sdmix:{}};celebrated={};saveStore();refreshChips();renderProgress()}};
+$("presetBtn").onclick=()=>{if(confirm("Tüm ilerleme silinsin mi?")){store=EMPTY();celebrated={};saveStore();refreshChips();renderProgress()}};
+
+
+/* ---- chord palette (levha) ---- */
+function levhaOn(){return $("levha").checked}
+let palSel={r:null,q:null},cdTimer=null;
+function buildPal(){
+  const R=$("proots"),Q=$("pquals");R.innerHTML="";Q.innerHTML="";
+  const mk=(v,l,cls,c)=>{const b=document.createElement("button");b.className="pb "+cls;b.innerHTML=l;b.dataset.v=v;b.style.setProperty("--c",c);
+    b.onpointerdown=e=>{e.preventDefault();palTap("r",v)};R.appendChild(b)};
+  [[0,"C"],[2,"D"],[4,"E"],[5,"F"],[7,"G"],[9,"A"],[11,"B"]].forEach(([v,l],i)=>mk(v,l,"w",2*i+1));
+  [[1,"C♯<br>D♭",2],[3,"D♯<br>E♭",4],[6,"F♯<br>G♭",8],[8,"G♯<br>A♭",10],[10,"A♯<br>B♭",12]].forEach(([v,l,c])=>mk(v,l,"k",c));
+  ["maj7","m7","7","m7♭5"].forEach(q=>{const b=document.createElement("button");b.className="pb";b.textContent=q;b.dataset.v=q;
+    b.onpointerdown=e=>{e.preventDefault();palTap("q",q)};Q.appendChild(b)});
+}
+function palUi(){
+  document.querySelectorAll("#proots .pb").forEach(b=>b.classList.toggle("sel",palSel.r===+b.dataset.v));
+  document.querySelectorAll("#pquals .pb").forEach(b=>b.classList.toggle("sel",palSel.q===b.dataset.v));
+}
+function startBar(){
+  clearTimeout(cdTimer);
+  const b=$("cdBar");b.className="";b.style.transition="none";b.style.width="100%";
+  void b.offsetWidth;
+  b.style.transition="width "+FAST+"s linear";b.style.width="0%";
+  cdTimer=setTimeout(()=>{if(cur&&cur.thinkMs==null&&state==="wait")b.className="late"},FAST*1000);
+}
+function freezeBar(){
+  clearTimeout(cdTimer);
+  const b=$("cdBar"),w=getComputedStyle(b).width;b.style.transition="none";b.style.width=w;
+}
+function qShown(){
+  $("pal").hidden=!levhaOn();document.body.classList.toggle("lv",levhaOn());
+  document.querySelectorAll(".pb").forEach(b=>b.classList.remove("tgt","bad"));
+  palSel={r:null,q:null};palUi();
+  if(cur)cur.thinkMs=null;
+  if(levhaOn())startBar();
+}
+function palAfter(ok){
+  if(!levhaOn())return;
+  freezeBar();
+  if(!ok){
+    palSel={r:null,q:null};palUi();
+    document.querySelectorAll("#proots .pb").forEach(b=>{if(+b.dataset.v===cur.tones[0])b.classList.add("tgt")});
+    document.querySelectorAll("#pquals .pb").forEach(b=>{if(b.dataset.v===cur.q)b.classList.add("tgt")});
+    const h=$("fb").querySelector(".hint");if(h)h.textContent="Şimdi doğru akoru levhadan seç.";
+  }
+}
+function palTap(kind,val){
+  if(!cur||!levhaOn())return;
+  if(state==="wait"){
+    if(cur.thinkMs==null){cur.thinkMs=performance.now()-t0;freezeBar()}
+    palSel[kind]=val;palUi();
+    if(palSel.r!==null&&palSel.q!==null)finish(palSel.r===cur.tones[0]&&palSel.q===cur.q,false,"pal");
+  }else if(state==="fix"){
+    palSel[kind]=val;palUi();
+    if(palSel.r!==null&&palSel.q!==null){
+      if(palSel.r===cur.tones[0]&&palSel.q===cur.q)completeFix("touch");
+      else{
+        document.querySelectorAll(".pb.sel").forEach(b=>b.classList.add("bad"));
+        setTimeout(()=>{document.querySelectorAll(".pb.bad").forEach(b=>b.classList.remove("bad"));palSel={r:null,q:null};palUi()},300);
+      }
+    }
+  }
+}
+$("levha").onchange=()=>{document.body.classList.toggle("lv",levhaOn());$("pal").hidden=!levhaOn();reselect()};
 
 function press(e,src){
-  if(!cur)return;
+  if(!cur||levhaOn())return;
   const p=+e.dataset.pc,snd=src!=="midi";
   if(state==="fix"){
     if(snd)tone(+e.dataset.midi);
@@ -488,7 +596,7 @@ function showFns(ok){
 }
 function finish(ok,revealed,src){
   if(state!=="wait")return;
-  const ms=performance.now()-t0,{k,d,rt}=cur;
+  const ms=cur.thinkMs!=null?cur.thinkMs:performance.now()-t0,{k,d,rt}=cur;
   asked++;
   const fast=ok&&ms/1000<=FAST;
   if(cur.cell)record(cur.cell,ok,fast);
@@ -504,8 +612,9 @@ function finish(ok,revealed,src){
   fb.innerHTML=(ok?"Doğru ":(revealed?"Cevap ":"Yanlış "))+"— "+cur.name+(cur.prog?" ("+cur.role+")":"")+
     '<span class="notes">'+cur.notesText+(ok?"  ·  "+(ms/1000).toFixed(1)+" sn"+(fast?" ⚡":" (yavaş)"):"")+'</span><span class="notes hint">'+(ok?"":"Şimdi doğru akoru piyanoda çal.")+"</span>"+(src==="mic"&&mic.heard?'<span class="notes">Duyduğum: '+mic.heard+"</span>":"");
   $("show").hidden=true;
-  if(ok){state="done";$("next").hidden=false;if(src==="mic"||src==="midi")timer=setTimeout(newQuestion,1600)}
+  if(ok){state="done";$("next").hidden=false;if($("fast").checked)timer=setTimeout(newQuestion,FLOW*1000)}
   else{state="fix";$("next").hidden=true}
+  palAfter(ok);
   updateStats();
 }
 $("show").onclick=()=>finish(false,true);
@@ -523,9 +632,8 @@ function updateStats(){
 function completeFix(src){
   state="done";
   $("fb").className="fb ok";
-  $("fb").querySelector(".hint").textContent=(src==="mic"||src==="midi")?"Tamam, geçiyorum.":"Tamam. Hazır olunca Sonraki'ye bas.";
+  $("fb").querySelector(".hint").textContent="Tamam. Hazır olunca Sonraki'ye bas.";
   $("next").hidden=false;
-  if(src==="mic"||src==="midi")timer=setTimeout(newQuestion,1600);
 }
 
 /* ---- microphone chord listening ---- */
@@ -592,7 +700,7 @@ function micTick(){
     return;
   }
   const t=thr(),now=performance.now();
-  if(!cur||(state!=="wait"&&state!=="fix")){mic.armed=false;mic.silent=0;mic.win=null;return}
+  if(!cur||levhaOn()||(state!=="wait"&&state!=="fix")){mic.armed=false;mic.silent=0;mic.win=null;return}
   if(!mic.armed&&!mic.win){
     if(rms<t.off)mic.silent++;else mic.silent=0;
     if(mic.silent>=5){mic.armed=true;setMicStatus("Dinliyorum — akoru çal (tek tek de olur)")}
@@ -678,7 +786,7 @@ function onMidi(ev){
   if(e)press(e,"midi");
 }
 
-buildKeys();refreshChips();renderProgress();buildPiano();newQuestion();
+buildKeys();refreshChips();renderProgress();buildPiano();buildPal();newQuestion();
 </script>
 </body>
 </html>
